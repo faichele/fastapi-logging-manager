@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-logger-manager"
+version = "0.0.1"
+description = "Reusable logger and notification manager utility for FastAPI and other Python applications"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Fabian Aichele", email = "aichele@zykl.io" }
+]
+keywords = ["logging", "fastapi", "uvicorn", "logger"]
+dependencies = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Logging"
+]
+
+[project.urls]
+Homepage = "https://github.com/faichele/fastapi-logger-manager"
+Source = "https://github.com/faichele/fastapi-logger-manager"
+Issues = "https://github.com/faichele/fastapi-logger-manager/issues"
