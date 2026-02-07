@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi-logging-manager"
-version = "0.0.1"
+version = "0.0.3"
 description = "Reusable logger and notification manager utility for FastAPI and other Python applications"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -31,3 +31,13 @@ classifiers = [
 Homepage = "https://github.com/faichele/fastapi-logger-manager"
 Source = "https://github.com/faichele/fastapi-logger-manager"
 Issues = "https://github.com/faichele/fastapi-logger-manager/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+namespaces = false
+include = ["fastapi_logging_manager", "fastapi_logging_manager.*"]
+
+[tool.setuptools.package-data]
+fastapi_logging_manager = ["templates/*.html", "templates/README.md"]

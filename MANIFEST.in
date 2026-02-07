@@ -1,0 +1,2 @@
+# Ensure non-Python files are included in sdist
+recursive-include fastapi_logging_manager/templates *.html *.md

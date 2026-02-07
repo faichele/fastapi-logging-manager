@@ -11,7 +11,7 @@ pip install fastapi-logger-manager
 ## Schnelleinstieg
 
 ```python
-from fastapi_logger_manager import logger_manager
+from fastapi_logging_manager import logger_manager
 
 logger = logger_manager.get_app_logger()
 logger.info("App started")

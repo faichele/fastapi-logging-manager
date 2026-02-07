@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+
+<html lang="en" class="dark">
+  <head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>{{context.title}}</title>
+  </head>
+
+  <body class="dark:bg-gray-900">
+    <img
+      class="float-right py-3 px-5"
+      src="/favicon.ico"
+    />
+
+    <div class="flex items-center py-2 px-3">
+      <h1 class="text-3xl text-slate-300">{{context.title}}</h1>
+    </div>
+
+    <div class="flex items-center py-2 px-3 gap-3">
+      <label for="loggerSelect" class="text-slate-300">Logger:</label>
+      <select
+        id="loggerSelect"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+      >
+        <option value="" disabled selected>Loading…</option>
+      </select>
+
+      <span id="selectedLogger" class="text-slate-400 text-sm"></span>
+    </div>
+
+    <div class="flex items-center py-2 px-3">
+      <div
+        id="logs"
+        class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+      >
+        reading logs...
+      </div>
+    </div>
+
+    <script>
+      let ws_log = null;
+
+      function wsBaseUrl() {
+        // Use current host, and upgrade to ws/wss depending on http/https
+        const proto = window.location.protocol === "https:" ? "wss" : "ws";
+        return `${proto}://${window.location.host}/ws/log`;
+      }
+
+      function connectWebsocket(loggerName) {
+        if (ws_log) {
+          try {
+            ws_log.close();
+          } catch (e) {}
+          ws_log = null;
+        }
+
+        const url = loggerName
+          ? `${wsBaseUrl()}?logger=${encodeURIComponent(loggerName)}`
+          : wsBaseUrl();
+
+        ws_log = new WebSocket(url);
+
+        ws_log.onmessage = function (event) {
+          const logs = document.getElementById("logs");
+          logs.innerHTML = event.data;
+        };
+
+        ws_log.onclose = function () {
+          const logs = document.getElementById("logs");
+          // Don't spam, just show a hint
+          if (logs && logs.innerHTML.trim() === "") {
+            logs.innerHTML = "connection closed";
+          }
+        };
+      }
+
+      async function loadLoggerNames() {
+        const select = document.getElementById("loggerSelect");
+        const label = document.getElementById("selectedLogger");
+
+        // Endpoint lives under the same router prefix as the template page.
+        // Current page is `.../api/settings/`, logger endpoint is `.../api/settings/logs/logger_names`.
+        const loggerEndpoint = `${window.location.pathname.replace(/\/+$/, "")}/logs/logger_names`;
+
+        const resp = await fetch(loggerEndpoint, { headers: { Accept: "application/json" } });
+        if (!resp.ok) {
+          select.innerHTML = '<option value="" disabled selected>Failed to load</option>';
+          return;
+        }
+
+        const names = await resp.json();
+        select.innerHTML = "";
+
+        if (!Array.isArray(names) || names.length === 0) {
+          select.innerHTML = '<option value="" disabled selected>No loggers with files</option>';
+          connectWebsocket(null);
+          return;
+        }
+
+        for (const n of names) {
+          const opt = document.createElement("option");
+          opt.value = n;
+          opt.textContent = n;
+          select.appendChild(opt);
+        }
+
+        // default to first logger
+        select.value = names[0];
+        label.textContent = `showing: ${select.value}`;
+        connectWebsocket(select.value);
+
+        select.addEventListener("change", function (e) {
+          const value = e.target.value;
+          label.textContent = `showing: ${value}`;
+          connectWebsocket(value);
+        });
+      }
+
+      loadLoggerNames();
+    </script>
+  </body>
+</html>

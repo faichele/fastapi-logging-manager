@@ -41,6 +41,7 @@ class LoggerManager:
 
     _instance: Optional["LoggerManager"] = None
     _loggers: Dict[str, logging.Logger] = {}
+    _loggers_with_logfiles: Dict[str, logging.Logger] = {}
 
     def __new__(cls) -> "LoggerManager":
         if cls._instance is None:
@@ -69,6 +70,14 @@ class LoggerManager:
     def _ensure_log_dir(self) -> None:
         if not os.path.exists(self.log_directory):
             os.makedirs(self.log_directory, exist_ok=True)
+
+    @property
+    def logger_names(self) -> list[str]:
+        return list(self._loggers.keys())
+
+    @property
+    def loggers_with_logfiles(self) -> list[str]:
+        return list(self._loggers_with_logfiles.keys())
 
     def get_logger(
         self,
@@ -150,6 +159,8 @@ class LoggerManager:
                 file_handler = logging.FileHandler(file_path)
                 file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
+
+                self._loggers_with_logfiles[name] = logger
 
         self._loggers[name] = logger
         return logger
