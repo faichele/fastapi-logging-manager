@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastapi-logging-manager"
-version = "0.0.3"
+version = "0.0.4"
 description = "Reusable logger and notification manager utility for FastAPI and other Python applications"
 readme = "README.md"
 requires-python = ">=3.9"
