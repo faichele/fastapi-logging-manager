@@ -9,6 +9,9 @@ Environment variables (optional):
 - ``FASTAPI_LOGGER_LEVEL`` (default: ``"INFO"``)
 - ``FASTAPI_LOGGER_TO_CONSOLE`` (default: ``"true"``)
 - ``FASTAPI_LOGGER_TO_FILE`` (default: ``false``)
+- ``FASTAPI_LOGGER_ROTATION_ENABLED`` (default: ``false``)
+- ``FASTAPI_LOGGER_MAX_BYTES`` (default: ``10485760``)
+- ``FASTAPI_LOGGER_BACKUP_COUNT`` (default: ``5``)
 - ``FASTAPI_LOGGER_FORMAT`` (default:
   ``"%(asctime)s - %(name)s - %(levelname)s - %(message)s"``)
 
@@ -20,6 +23,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from logging.handlers import RotatingFileHandler
 from typing import Dict, Optional, Union
 
 
@@ -66,6 +70,37 @@ class LoggerManager:
             "FASTAPI_LOGGER_TO_CONSOLE", True
         )
         self.default_to_file: bool = _get_bool_env("FASTAPI_LOGGER_TO_FILE", False)
+        self.default_rotation_enabled: bool = _get_bool_env(
+            "FASTAPI_LOGGER_ROTATION_ENABLED", False
+        )
+        self.default_max_bytes: int = self._get_positive_int_env(
+            "FASTAPI_LOGGER_MAX_BYTES", 10 * 1024 * 1024
+        )
+        self.default_backup_count: int = self._get_non_negative_int_env(
+            "FASTAPI_LOGGER_BACKUP_COUNT", 5
+        )
+
+    @staticmethod
+    def _get_positive_int_env(var_name: str, default: int) -> int:
+        value = os.getenv(var_name)
+        if value is None:
+            return default
+        try:
+            parsed = int(value)
+        except ValueError:
+            return default
+        return parsed if parsed > 0 else default
+
+    @staticmethod
+    def _get_non_negative_int_env(var_name: str, default: int) -> int:
+        value = os.getenv(var_name)
+        if value is None:
+            return default
+        try:
+            parsed = int(value)
+        except ValueError:
+            return default
+        return parsed if parsed >= 0 else default
 
     def _ensure_log_dir(self) -> None:
         if not os.path.exists(self.log_directory):
@@ -87,6 +122,9 @@ class LoggerManager:
         to_file: Optional[bool] = None,
         file_name: Optional[str] = None,
         format_str: Optional[str] = None,
+        rotation_enabled: Optional[bool] = None,
+        max_bytes: Optional[int] = None,
+        backup_count: Optional[int] = None,
     ) -> logging.Logger:
         """Return a configured :class:`logging.Logger`.
 
@@ -114,6 +152,14 @@ class LoggerManager:
         format_str:
             Optional logging format string. If omitted, the environment default
             is used.
+        rotation_enabled:
+            Enable automatic size-based rotation. If ``None``, the environment
+            default is used. Manual rotation is available for every file logger.
+        max_bytes:
+            Maximum file size before automatic rotation. Must be positive when
+            rotation is enabled.
+        backup_count:
+            Number of rotated files to retain.
 
         Returns
         -------
@@ -156,7 +202,23 @@ class LoggerManager:
                     file_name = f"{name.split('.')[-1]}.log"
                 self._ensure_log_dir()
                 file_path = os.path.join(self.log_directory, file_name)
-                file_handler = logging.FileHandler(file_path)
+                if rotation_enabled is None:
+                    rotation_enabled = self.default_rotation_enabled
+                if max_bytes is None:
+                    max_bytes = self.default_max_bytes
+                if backup_count is None:
+                    backup_count = self.default_backup_count
+                if max_bytes < 0:
+                    raise ValueError("max_bytes must not be negative")
+                if rotation_enabled and max_bytes == 0:
+                    raise ValueError("max_bytes must be greater than zero when rotation is enabled")
+                if backup_count < 0:
+                    raise ValueError("backup_count must not be negative")
+                file_handler = RotatingFileHandler(
+                    file_path,
+                    maxBytes=max_bytes if rotation_enabled else 0,
+                    backupCount=backup_count,
+                )
                 file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
 
@@ -164,6 +226,60 @@ class LoggerManager:
 
         self._loggers[name] = logger
         return logger
+
+    def rotate_logger(self, name: str) -> bool:
+        """Rotate all file handlers belonging to a registered logger.
+
+        Returns ``True`` when at least one file handler was rotated and ``False``
+        when the logger is unknown or has no file handler.
+        """
+
+        logger = self._loggers.get(name)
+        if logger is None:
+            return False
+
+        rotated = False
+        for handler in logger.handlers:
+            if isinstance(handler, RotatingFileHandler):
+                handler.doRollover()
+                rotated = True
+        return rotated
+
+    def rotate_all_loggers(self) -> list[str]:
+        """Manually rotate every registered logger that writes to a file."""
+
+        rotated_loggers = [
+            name for name in self._loggers_with_logfiles if self.rotate_logger(name)
+        ]
+        return rotated_loggers
+
+    def rotation_status(self, name: str) -> dict[str, object]:
+        """Return rotation settings for a registered logger."""
+
+        logger = self._loggers.get(name)
+        if logger is None:
+            raise KeyError(f"Unknown logger: {name}")
+
+        handlers = [
+            handler
+            for handler in logger.handlers
+            if isinstance(handler, RotatingFileHandler)
+        ]
+        if not handlers:
+            return {"logger": name, "enabled": False, "handlers": []}
+
+        return {
+            "logger": name,
+            "enabled": any(handler.maxBytes > 0 for handler in handlers),
+            "handlers": [
+                {
+                    "file": handler.baseFilename,
+                    "max_bytes": handler.maxBytes,
+                    "backup_count": handler.backupCount,
+                }
+                for handler in handlers
+            ],
+        }
 
     def configure_all_loggers(self, level: Union[int, str] = logging.INFO) -> None:
         """Configure the root logger level for the current process."""
@@ -230,4 +346,3 @@ class LoggerManager:
 # Public singleton instance -----------------------------------------------------
 
 logger_manager = LoggerManager()
-
