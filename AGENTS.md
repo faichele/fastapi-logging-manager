@@ -51,3 +51,17 @@ Konfiguration und Log-Viewer.
 - Keine Engines, Sessions oder Datenbanklogik einbauen.
 - Keine stillen Fallbacks fuer Fehlerpfade ergaenzen, wenn sie das Verhalten verschleiern.
 - Keine Dateien unter `__pycache__` oder IDE-Metadaten anfassen.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five-label triage vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repository uses a single-context domain-doc layout. See `docs/agents/domain.md`.
