@@ -88,7 +88,10 @@ def create_log_view_router(
             "title": "FastAPI Streaming Log Viewer over WebSockets",
             "loggers": logger_manager.loggers_with_logfiles,
         }
-        return templates.TemplateResponse("log_viewer.html", {"request": request, "context": context})
+        return templates.TemplateResponse(
+            name="log_viewer.html" if custom_template_name is None else custom_template_name,
+            context={"request": request, "context": context}
+        )
 
     @router.get("/logs/logger_names", response_class=JSONResponse)
     async def get_logger_names(request: Request):
